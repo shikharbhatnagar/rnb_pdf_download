@@ -6,7 +6,9 @@ function rnb_option_list() {
         <h2>Options</h2>
         <div class="tablenav top">
             <div class="alignleft actions">
-                <a href="<?php echo admin_url('admin.php?page=rnb_option_create'); ?>">Add New</a>
+                <br><br>
+            	<a class="page-title-action" href="<?php echo admin_url('admin.php?page=rnb_option_create'); ?>">Add New</a>
+                <br><br>
             </div>
             <br class="clear">
         </div>
@@ -30,7 +32,7 @@ function rnb_option_list() {
 				<th class="manage-column ss-list-width" width="5%"><input type="checkbox" name="chkAll" id="chkAll" class="ss-field-width" onClick="toggle(this)"></th>
                 <th class="manage-column ss-list-width" width="5%">ID</th>
                 <th class="manage-column ss-list-width" width="70%">Option Title</th>
-                <th class="manage-column ss-list-width" width="5%">Option Type</th>
+                <th class="manage-column ss-list-width" width="20%">Option Type</th>
                 <th width="20%">&nbsp;</th>
             </tr>
             <?php $i=1; foreach ($rows as $row) { ?>
@@ -43,7 +45,7 @@ function rnb_option_list() {
                 </tr>
             <?php } ?>
         </table>
-		<input type='submit' name="delete" value='Delete' class='button' onclick="return confirm('Are you sure?')">
+		<!--<input type='submit' name="delete" value='Delete' class='button' onclick="return confirm('Are you sure?')">-->
 		</form>
     </div>
     <?php

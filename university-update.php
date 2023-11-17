@@ -5,11 +5,14 @@ function rnb_university_update() {
     $id = $_GET["id"];
     $name = $_POST["universitytitle"];
     if (isset($_POST['update'])) {
+    	$res = str_replace( array( '\'', '"', ',' , ';', '<', '>', '(', ')', '.', '|', '/', ':', '\\' ), '', $name);
+		$res = strtolower($res);
+		$vslug = str_replace( ' ', '-', $res);
         $wpdb->update(
                 $table_name,
-                array('vuniversity_title' => $name, 'nuniversity_order' => 1),
+                array('vuniversity_title' => $name, 'nuniversity_order' => 1, 'vslug' => $vslug),
                 array('nuniversity_id' => $id),
-                array('%s', '%s'),
+                array('%s', '%s', '%s'),
                 array('%s')
         );
     }
@@ -28,11 +31,18 @@ function rnb_university_update() {
         <h2>Universities</h2>
         <?php if ($_POST['delete']) { ?>
             <div class="updated"><p>University deleted</p></div>
-            <a href="<?php echo admin_url('admin.php?page=rnb_university_list') ?>">&laquo; Back to university list</a>
+            <br><br>
+        	<a class="page-title-action" href="<?php echo admin_url('admin.php?page=rnb_university_list') ?>">&laquo; Back to university list</a>
+            <br><br>
         <?php } else if ($_POST['update']) { ?>
             <div class="updated"><p>University updated</p></div>
-            <a href="<?php echo admin_url('admin.php?page=rnb_university_list') ?>">&laquo; Back to university list</a>
+        	<br><br>
+            <a class="page-title-action" href="<?php echo admin_url('admin.php?page=rnb_university_list') ?>">&laquo; Back to university list</a>
+            <br><br>
         <?php } else { ?>
+        	<br><br>
+            <a class="page-title-action" href="<?php echo admin_url('admin.php?page=rnb_university_list') ?>">&laquo; Back to university list</a>
+            <br><br>
             <form method="post" action="<?php echo $_SERVER['REQUEST_URI']; ?>">
                 <table class='wp-list-table widefat fixed'>
                     <tr>
@@ -40,6 +50,7 @@ function rnb_university_update() {
                         <td><input type="text" name="universitytitle" value="<?php echo $name; ?>" class="ss-field-width" placeholder="eg. Jiwaji University, Gwalior, MP"></td>
                     </tr>
                 </table>
+            <br>
                 <input type='submit' name="update" value='Save' class='button'> &nbsp;&nbsp;
                 <input type='submit' name="delete" value='Delete' class='button' onclick="return confirm('Are you sure?')">
             </form>

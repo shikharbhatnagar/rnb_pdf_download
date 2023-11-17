@@ -6,10 +6,13 @@ function rnb_university_create() {
         $table_name = $wpdb->prefix . "rnb_universities";
 		if(!empty($university))
 		{
+        	$res = str_replace( array( '\'', '"', ',' , ';', '<', '>', '(', ')', '.', '|', '/', ':', '\\' ), '', $university);
+			$res = strtolower($res);
+			$vslug = str_replace( ' ', '-', $res);
 			$res = $wpdb->insert(
 					$table_name,
-					array('vuniversity_title' => $university, 'nuniversity_order' => 1),
-					array('%s', '%s')
+					array('vuniversity_title' => $university, 'nuniversity_order' => 1, 'vslug' => $vslug),
+					array('%s', '%s', '%s')
 			);
 			$message.= $res." University Created";
 		}

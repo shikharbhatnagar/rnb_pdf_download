@@ -37,6 +37,7 @@ function rnb_option_create() {
                     </td>
                 </tr>
             </table>
+        	<br>
             <input type="submit" name="insert" value="Save" class="button">
         </form>
     </div>

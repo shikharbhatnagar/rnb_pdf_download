@@ -4,6 +4,8 @@ function rnb_university_upload() {
     $table_name1 = $wpdb->prefix . "rnb_universities";
     $table_name2 = $wpdb->prefix . "rnb_pdf";
     $table_name3 = $wpdb->prefix . "rnb_options";
+	
+	$upload_dir = wp_upload_dir();
 
     $id = $_GET["id"];
     $name = $_POST["universitytitle"];
@@ -19,8 +21,8 @@ function rnb_university_upload() {
         }
         $wpdb->insert(
                 $table_name2,
-                array('nuniversity_id' => $id, 'vpdf_data' => json_encode($ar), 'vimage_data' => json_encode($ar2)),
-                array('%s', '%s', '%s')
+                array('nuniversity_id' => $id, 'vpdf_data' => json_encode($ar), 'vimage_data' => json_encode($ar2), 'vpdf_type' => 'university'),
+                array('%s', '%s', '%s', '%s')
         );
     }
     else if (isset($_POST['update'])) {
@@ -100,45 +102,55 @@ function rnb_university_upload() {
         <h2><?php echo "Manage PDF University - ".$university_title; ?></h2>
         <?php if ($_POST['insert']) { ?>
             <div class="updated"><p>PDF uploaded</p></div>
-            <a href="<?php echo admin_url('admin.php?page=rnb_university_list') ?>">&laquo; Back to university list</a>
+            <br><br>
+        	<a class="page-title-action" href="<?php echo admin_url('admin.php?page=rnb_university_list') ?>">&laquo; Back to university list</a>
+            <br><br>
         <?php }else if ($_POST['update']) { ?>
             <div class="updated"><p>PDF uploaded</p></div>
-            <a href="<?php echo admin_url('admin.php?page=rnb_university_list') ?>">&laquo; Back to university list</a>
+            <br><br>
+        	<a class="page-title-action" href="<?php echo admin_url('admin.php?page=rnb_university_list') ?>">&laquo; Back to university list</a>
+            <br><br>
         <?php } else { ?>
+        	<br><br>
+        	<a class="page-title-action" href="<?php echo admin_url('admin.php?page=rnb_university_list') ?>">&laquo; Back to university list</a>
+            <br><br>
             <form method="post" action="<?php echo $_SERVER['REQUEST_URI']; ?>" enctype="multipart/form-data">
                 <table class='wp-list-table widefat fixed striped posts'>
                 <tr>
-                    <th class="manage-column ss-list-width" width="5%">&nbsp;</th>
+                    <!--<th class="manage-column ss-list-width" width="5%">&nbsp;</th>-->
                     <th class="manage-column ss-list-width" width="5%">ID</th>
                     <th class="manage-column ss-list-width" width="30%">Option Title</th>
-                    <th class="manage-column ss-list-width" width="30%">Upload PDF File</th>
-                    <th width="25%">&nbsp;</th>
+                    <th class="manage-column ss-list-width" colspan="2" width="30%">Upload PDF File</th>
+                    <th class="manage-column ss-list-width" colspan="2" width="30%">Upload Image File</th>
                 </tr>
-                <?php $j=0; $i=1; foreach ($options as $row) { 
-                    $pdflink = "<a href='".$row->pdfurl."'>Uploaded</a>"; 
-                    $imagelink = "<a href='".$row->previewurl."'>Image</a>"; ?>
+                <?php
+					// $burl = get_bloginfo('wpurl');
+                    //echo "<pre>"; print_r($options); echo "</pre>";
+					$j=0; $i=1; foreach ($options as $row) { 
+                    $pdflink = "<a href='". $upload_dir['baseurl'] . "/" . $row->pdfurl."'>Uploaded</a>"; 
+                    $imagelink = "<a href='". $upload_dir['baseurl'] . "/" . $row->previewurl."'>Image</a>"; ?>
                     <tr>
-                        <td class="manage-column ss-list-width">&nbsp;</td>
+                        <!--<td class="manage-column ss-list-width">&nbsp;</td>-->
                         <td class="manage-column ss-list-width"><?php echo $i++; ?></td>
-                        <td class="manage-column ss-list-width"><?php echo $row->voption_title; ?>
-                            <input type="text" name="optionid[]" value="<?php echo $row->noption_id; ?>">
-                            <input type="text" name="optionpdf[]" value="<?php echo ($row->pdfurl!='0'?$row->pdfurl:'0'); ?>">
-                            <input type="text" name="optionpreview[]" value="<?php echo ($row->previewurl!='0'?$row->previewurl:'0'); ?>">
+                        <td class="manage-column ss-list-width"><?php echo ucwords($row->voption_title); ?>
+                            <input type="hidden" name="optionid[]" value="<?php echo $row->noption_id; ?>">
+                            <input type="hidden" name="optionpdf[]" value="<?php echo ($row->pdfurl!='0'?$row->pdfurl:'0'); ?>">
+                            <input type="hidden" name="optionpreview[]" value="<?php echo ($row->previewurl!='0'?$row->previewurl:'0'); ?>">
                         </td>
                         <td class="manage-column ss-list-width" id="<?php echo 'td-pdf_'.$row->noption_id; ?>" tdindex="<?php echo $j; ?>"><input type="file" accept=".pdf" name="<?php echo 'pdf_'.$row->noption_id; ?>" id="<?php echo 'pdf_'.$row->noption_id; ?>"></td>
                         <td id="<?php echo 'td-upload-pdf_'.$row->noption_id; ?>"><?php echo ($row->pdfurl!='0'?$pdflink:''); ?></td>
 
-                        <td class="manage-column ss-list-width" id="<?php echo 'td-image_'.$row->noption_id; ?>" tdindex="<?php echo $j; ?>"><input type="file" accept=".png" name="<?php echo 'image_'.$row->noption_id; ?>" id="<?php echo 'image_'.$row->noption_id; ?>"></td>
+                        <td class="manage-column ss-list-width" id="<?php echo 'td-image_'.$row->noption_id; ?>" tdindex="<?php echo $j; ?>"><input type="file" accept=".png,.jpg,.jpeg" name="<?php echo 'image_'.$row->noption_id; ?>" id="<?php echo 'image_'.$row->noption_id; ?>"></td>
                         <td id="<?php echo 'td-upload-image_'.$row->noption_id; ?>"><?php echo ($row->previewurl!='0'?$imagelink:''); ?></td>
                     </tr>
                 <?php $j++; } ?>
                 </table>
                 <?php
                 if(empty($university_pdfid)){
-                    echo "<input type='submit' name='insert' value='Save' class='button'>";
+                    echo "<br><input type='submit' name='insert' value='Save' class='button'>";
                 }
                 else{
-                    echo "<input type='submit' name='update' value='Save' class='button'>";
+                    echo "<br><input type='submit' name='update' value='Save' class='button'>";
                 }
                 ?>
             </form>

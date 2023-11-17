@@ -1,6 +1,13 @@
 <?php 
+$subjectcategory_param = get_query_var( 'subject_category' );
+$subjectname_param = get_query_var( 'subject_name' );
+$optionname_param = get_query_var( 'subject_option_name' );
 get_header();
 require_once('lib/class.pdf2text.php');
+$tab_type = $_GET['tab_type'];
+//$tab_type_id = $_GET['id'];
+$pg_param = $_GET['pg'];
+$optid_param = $_GET['optid'];
 ?>
 <style>
 /* Style the form */
@@ -55,6 +62,9 @@ input.invalid {
 li.list-group-item {
     cursor: pointer;
 }
+.position-relative.row.form-group {
+    text-transform: capitalize;
+}
 </style>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
 <!---- tabbed pane style start--->
@@ -67,21 +77,20 @@ global $wpdb;
 $table_name1 = $wpdb->prefix . "rnb_universities";
 $table_name2 = $wpdb->prefix . "rnb_options";
 $table_name3 = $wpdb->prefix . "rnb_pdf";
-$universityrows  = $wpdb->get_results("SELECT t1.nuniversity_id, t1.vuniversity_title, t2.npdf_id, t2.vpdf_data, t2.vimage_data
-					FROM $table_name1 t1
-					JOIN $table_name3 t2 on t2.nuniversity_id = t1.nuniversity_id
-					WHERE t2.vpdf_type='university'
-					ORDER BY t1.vuniversity_title ASC", ARRAY_A);
-foreach($universityrows as $ukey => $uvalue){ 
-	$universityrows[$ukey]['vpdf_data'] = json_decode($universityrows[$ukey]['vpdf_data'], 1);
-	$universityrows[$ukey]['vimage_data'] = json_decode($universityrows[$ukey]['vimage_data'], 1);
-}	
+$table_name4 = $wpdb->prefix . "rnb_courses";
 
-$courserows  = $wpdb->get_results("SELECT t1.ncourse_id, t1.vcourse_title, t2.npdf_id, t2.vpdf_data, t2.vimage_data 
-					FROM wp_rnb_courses t1 
-					JOIN wp_rnb_pdf t2 on t2.nuniversity_id = t1.ncourse_id 
-					WHERE t2.vpdf_type='course' 
-					ORDER BY t1.vcourse_title ASC", ARRAY_A);
+$subject_slug_rows  = $wpdb->get_results("SELECT t4.ncourse_id, t4.vcourse_title, t4.ncategory_id, t4.vslug FROM $table_name4 t4 WHERE vslug='".$subjectname_param."'", ARRAY_A);
+
+$opt_row = $wpdb->get_results("SELECT noption_id, voption_title, noption_order, voption_type from $table_name2 WHERE voption_type='sample' AND vslug='".$optionname_param."' order by noption_order", ARRAY_A);
+
+$optid_param = ($opt_row[0]['noption_id']>0?$opt_row[0]['noption_id']:'na');
+$tab_type_id = $subject_slug_rows[0]['ncourse_id'];
+
+$courserows  = $wpdb->get_results("SELECT t1.ncourse_id, t1.vcourse_title, t1.vslug, t2.npdf_id, t2.vpdf_data, t2.vimage_data, t2.vpdf_type
+                    FROM wp_rnb_courses t1 
+                    JOIN wp_rnb_pdf t2 on t2.nuniversity_id = t1.ncourse_id 
+                    WHERE t2.vpdf_type='samples' 
+                    ORDER BY t1.vcourse_title ASC", ARRAY_A);
 foreach($courserows as $ckey => $cvalue){ 
 	$courserows[$ckey]['vpdf_data'] = json_decode($courserows[$ckey]['vpdf_data'], 1);
 	$courserows[$ckey]['vimage_data'] = json_decode($courserows[$ckey]['vimage_data'], 1);
@@ -89,37 +98,55 @@ foreach($courserows as $ckey => $cvalue){
 
 //echo "University:<pre>"; print_r($universityrows); echo "</pre>";
 //echo "Course:<pre>"; print_r($courserows); echo "</pre>";
-$optionrows = $wpdb->get_results("SELECT noption_id, voption_title, noption_order, voption_type from $table_name2 order by noption_order");
+$optionrows = $wpdb->get_results("SELECT noption_id, voption_title, noption_order, voption_type, vslug from $table_name2 order by noption_order");
 
-//echo "<pre>"; print_r($optionrows); echo "</pre>";
+$site  = $wpdb->get_results("SELECT option_name, option_value
+                    FROM wp_options
+                    WHERE option_name='siteurl'", ARRAY_A);
+$dbsiteurl = $site[0]['option_value'];
 
+$heading = '';
+
+$heading = '<a href="'.$dbsiteurl.'/samples">Research Writing Sample</a> - '.$subject_slug_rows[0]['vcourse_title'];
+
+
+$university_opt_pic = '';
+$sample_opt_pic = '';
+$university_opt_pdf = '';
+$sample_opt_pdf = '';
+$selected_opt_pdf = '';
+
+if($optid_param != 'na'){
+    $pdfdata_ary  = $wpdb->get_results("SELECT vimage_data,vpdf_data
+					FROM $table_name3 WHERE vpdf_type='university'
+					AND nuniversity_id=".$tab_type_id, ARRAY_A);
+	$pdfdata_ary1 = json_decode($pdfdata_ary[0]['vimage_data'], true); 
+	$university_opt_pic = $pdfdata_ary1[$optid_param];
+	$pdfdata_ary2 = json_decode($pdfdata_ary[0]['vpdf_data'], true);
+	$university_opt_pdf = $pdfdata_ary2[$optid_param];
+	
+	$pdfdata_ary  = $wpdb->get_results("SELECT vimage_data,vpdf_data
+					FROM $table_name3 WHERE vpdf_type='samples'
+					AND nuniversity_id=".$tab_type_id, ARRAY_A);
+	$pdfdata_ary3 = json_decode($pdfdata_ary[0]['vimage_data'], true); 
+	$sample_opt_pic = $pdfdata_ary3[$optid_param];
+	$pdfdata_ary4 = json_decode($pdfdata_ary[0]['vpdf_data'], true);
+	$sample_opt_pdf = $pdfdata_ary4[$optid_param];
+}
 $upload_dir = wp_upload_dir();
 ?>
 <div class="container">
-    <div class="row align-items-start">
+	<div class="row align-items-start" id="notify"></div>
+    <!--<div class="row align-items-start">
 	    <div class="col-12 text-start">
-            <img src="http://phdguides.org/wp-content/uploads/2022/12/banner02.jpg" class="img-fluid">
+            <img src="<?php //echo $dbsiteurl.'/wp-content/uploads/2022/12/banner02.jpg'; ?>" class="img-fluid">
         </div>
-    </div>
+    </div>-->
     <div class="row align-items-start">
-        <div class="col-4 text-start">
-            <div class="alert alert-primary" role="alert">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-            </div>  
-        </div>
-        <div class="col-4 text-start">
-            <div class="alert alert-info" role="alert">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-            </div>
-        </div>
-        <div class="col-4 text-start">
-            <div class="alert alert-danger" role="alert">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-            </div>
-        </div>
-    </div>
+        <div class="col-12 text-start"><h2 style="text-transform: capitalize;"><p id="h2text"><?= $heading; ?></p></h2></div>
+    </div>    
     <div class="row align-items-start">
-	  <div class="col-4 text-start">
+	  <!--<div class="col-4 text-start">
         
         <ul class="nav nav-tabs">
             <li class="active"><a data-toggle="tab" href="#university" name="university"><strong>Formats & Guidelines</strong></a></li>
@@ -150,43 +177,20 @@ $upload_dir = wp_upload_dir();
         		</div>	
             </div>
         </div>
-    </div>
-    <div class="col-8">
+    </div>-->
+    <div class="col-12">
     	<div class="rnb-main-content" id="main-content">
       		
       	</div>
     </div>
-<!--     <div class="col text-start">
-    	<div class="rnb-university-scroll-bar">
-	      	<ul class="list-group">
-	      		<?php 
-	      		foreach($universityrows as $ukey => $uvalue){ ?>
-					<li class="list-group-item university" aria-current="true" university-id="<?php echo $uvalue['nuniversity_id']; ?>"><?php echo $uvalue['vuniversity_title']; ?></li>
-				<?php } ?>
-			</ul>
-		</div>	
-    </div>
-    <div class="col-6">
-    	<div class="rnb-main-content" id="main-content">
-      		
-      	</div>
-    </div>
-    <div class="col text-end">
-    	<div class="rnb-course-scroll-bar">
-	      	<ul class="list-group">
-				<li class="list-group-item active" aria-current="true">An active item</li>
-				<li class="list-group-item">A second item</li>
-				<li class="list-group-item">A third item</li>
-				<li class="list-group-item">A fourth item</li>
-				<li class="list-group-item">And a fifth one</li>
-			</ul>
-		</div>	
-    </div> -->
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.min.js" integrity="sha384-IDwe1+LCz02ROU9k972gdyvl+AESN10+x7tBKgc9I5HFtuNz0wWnPclzo6p9vxnk" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-OERcA2EqjJCMA+/3y+gxIOqMEjwtxJY7qPCqsdltbNJuaOe923+mo//f6V8Qbsw3" crossorigin="anonymous"></script>
 <script>
+var userAgent = navigator.userAgent;
+var ele_type = '';
+var selected_optionid = '';
 let hostname = location.hostname;
 var currentTab = 0; // Current tab is set to be the first tab (0)
 var university_id = 0;
@@ -194,66 +198,95 @@ var course_id = 0;
 var pdfFile = '';
 var otp = 'A-2132';
 var tab_type = 'university-id';
-window.addEventListener("click", (e) => {
+var pdfFiletext='';
+// window.addEventListener("click", (e) => {
+
+var university_data = 	'<?php echo json_encode($universityrows); ?>';
+var options_data 	=	'<?php echo json_encode($optionrows); ?>';
+var course_data = '<?php echo json_encode($courserows); ?>';
+
+var university_data_array = JSON.parse(university_data);
+var options_data_array = JSON.parse(options_data);
+var course_data_array = JSON.parse(course_data);
+
+var upload_base_url = '<?php echo $upload_dir['baseurl']; ?>';
+
+var univoptpic = '<?php echo $university_opt_pic; ?>';
+var sampoptpic = '<?php echo $sample_opt_pic; ?>';
+var preview_imgurl_onload = '';
+var univoptpdf = '<?php echo $university_opt_pdf; ?>';
+console.log('univoptpdf:',univoptpdf);
+var sampoptpdf = '<?php echo $sample_opt_pdf; ?>';
+var preview_pdfurl_onload = '';
+
+var current_url = new URL(window.location.href);
+var search_params = current_url.searchParams;
+        
+window.addEventListener("load", (e) => {
     console.log("You knocked? e:",e);
 	
-	var university_data = 	'<?php echo json_encode($universityrows); ?>';
-	var options_data 	=	'<?php echo json_encode($optionrows); ?>';
-    var course_data = '<?php echo json_encode($courserows); ?>';
-	
-    var university_data_array = JSON.parse(university_data);
-	var options_data_array = JSON.parse(options_data);
-	var course_data_array = JSON.parse(course_data);
-	
-	var upload_base_url = '<?php echo $upload_dir['baseurl']; ?>';
-	
-	// console.log("Type:", e.path[0].attributes[2].name);
-	
-    if(e.path[0].attributes[2].name == 'university-id'){
+//if(e.path[0].attributes[2].name == 'university-id'){
+//      tab_type = e.path[0].attributes[2].name;
+    
+    var vnam = '';
+    var vphn = '';
+    var veml = '';
+    var vnameSet = (localStorage.getItem('vname_phd') !== null);
+    var vphoneSet = (localStorage.getItem('vphone_phd') !== null);
+    var vemailSet = (localStorage.getItem('vemail_phd') !== null);
+    
+    if (vnameSet)  {
+        vnam = localStorage.getItem('vname_phd');
+    }
+    if (vphoneSet)  {
+        vphn = localStorage.getItem('vphone_phd');
+    }
+    if (vemailSet)  {
+        veml = localStorage.getItem('vemail_phd');
+    }
+    
 		
-		tab_type = e.path[0].attributes[2].name;
-		
-		let all_li = document.getElementsByClassName("list-group-item");
-        
-        for(var ii=0; ii<all_li.length; ii++){
-            all_li[ii].classList.remove("active");
-        }
-        
-        e.path[0].classList.add("active");
+		var notihtml = '<div class="col-12 text-start"><div class="alert alert-warning text-center" role="alert"><strong><a href="http://phdguides.org/format-guidelines/" target="_blank" class="btn btn-primary" style="font-weight:bold;">Also see our University Formats & Guidelines</a></strong></div></div>';
+		document.getElementById("notify").innerHTML = notihtml;
 		
     	otp = generateOTP();
 
     	currentTab = 0;
 
   		let options_section = '';
-  		university_id = e.path[0].attributes[2].value;
-
-  		//options_section += '<h1>Download '+university_id+'</h1>';
-	  	options_section += '<div class="tab" id="tabpanes">';
+		
+        course_id = '<?php echo $tab_type_id; ?>';
+        
+		options_section += '<div class="tab" id="tabpanes">';
 		options_section += '<div class="alert alert-warning" role="alert">  Document Type</div>';
 
+		console.log("options_data_array",options_data_array);
 		options_data_array.map((optv,opti) => {
-
-			if(optv.voption_type == 'university'){
-            	
-            	if(tab_type == 'university-id'){
-
-            		let pdfdataa = university_data_array.map((univ,unii) => {
-                		if(univ.nuniversity_id == university_id){
-                    		return univ.vpdf_data;
+			if(optv.voption_type == 'sample'){
+ 
+            		let pdfdataa = course_data_array.map((univ,unii) => {
+            		   
+                		if((univ.ncourse_id == course_id) && (univ.vpdf_type == 'samples')){
+                		    return univ.vpdf_data;
                 		}
             		});
-
+console.log("pdfdataa",pdfdataa);
                 	pdfdataa.forEach((pdfv,pdfi) => {
                 		if(pdfv != undefined){
                     		for (const optid in pdfv) {
+                    		    
                         		if(optid == optv.noption_id){
-                            		
                                 	options_section += '<div id="tab1">';
 									options_section += '<div class="position-relative row form-group">';
 									options_section += '<label for="txtname" class="col-sm-3 col-form-label">'+optv.voption_title+'</label>';
 									options_section += '<div class="col-sm-9">';
-									options_section += '<input type="radio" for="regForm" value="'+optv.noption_id+'" name="seloptions" seluniversity="'+university_id+'">';
+								// 	options_section += '<input type="radio" for="regForm" value="'+optv.noption_id+'" name="seloptions" seluniversity="'+course_id+'">';
+								    if('<?php echo $optid_param; ?>' == optv.noption_id){ 
+                                        options_section += '<input type="radio" for="regForm" value="'+optv.vslug+'" data-id="'+optv.noption_id+'" name="seloptions" seluniversity="'+course_id+'" checked="true">';
+                        		    }
+                        		    else{
+                        		        options_section += '<input type="radio" for="regForm" value="'+optv.vslug+'" data-id="'+optv.noption_id+'" name="seloptions" seluniversity="'+course_id+'">';
+                        		    }
 									options_section += '</div>';
 									options_section += '</div>';
 									options_section += '</div>';
@@ -264,112 +297,24 @@ window.addEventListener("click", (e) => {
             		});
         		}
 
-			}
+			
 
 		});
 
 		options_section += '</div>';
-    
-	  	options_section	+=	'<div class="tab" id="pdftab">Sample content:';
-	  	if(Number(university_id) <= 3 ){
-	      options_section   +=  '<br><strong>Title1</strong><br><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p><br>';
-	    }
-	    else if(Number(university_id) > 3 ){
-	     options_section   +=  '<br><strong>Title1</strong><br><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p><br>';
-	    }
+
+	  	preview_imgurl_onload = upload_base_url + "/" + sampoptpic;
+	  	preview_pdfurl_onload = upload_base_url + "/" + sampoptpdf; 
+	  	
+	  	options_section	+=	'<div class="tab" id="pdftab">';
+    	options_section += '<div class="alert alert-warning" role="alert">Sample Content</div>';
+		options_section += '<img src="'+preview_imgurl_onload+'" class="rounded mx-auto d-block" alt="some text">';
 	  	options_section 	+=	'</div>';
 
 	  	options_section 	+=	'<div class="tab"><div class="alert alert-warning" role="alert">General Information</div>';
-	  	options_section 	+=	'<p><input id="visitor-name" name="visitor-name" placeholder="Your name"></p>';
-	  	options_section 	+=	'<p><input id="visitor-mobile" name="visitor-mobile" placeholder="Your mobile" onkeypress="javascript:return isNumber(event)"></p>';
-	  	options_section 	+=	'<p><input id="visitor-email" name="visitor-email" placeholder="Your email"></p>';
-	  	options_section 	+=	'</div>';
-
-	  	/*options_section 	+=	'<div class="tab">Verify:';
-	  	options_section 	+=	'<p><input id="visitor-otp" name="visitor-otp" placeholder="OTP"></p>';
-	  	options_section   	+=  '<p>';
-	    options_section   	+=  '<button id="visitor-resendotp" name="visitor-resendotp" type="button">Resend OTP</button>';
-	    options_section   	+=  '<button id="visitor-verify" name="visitor-verify" type="button">Verify</button>';
-	    options_section   	+=  '</p>';
-	  	options_section 	+=	'</div>';*/
-	  	
-	  	options_section 	+=	'<div class="tab">';
-	  	options_section 	+=	'Loading...<div class="spinner-border text-primary" role="status"><span class="sr-only">Loading...</span></div>';
-	  	options_section 	+=	'</div>';
-
-	  	options_section 	+=	'<div style="overflow:auto;">';
-	  	options_section 	+=	'<div style="float:right;">';
-	  	options_section 	+=	'<button type="button" id="prevBtn" onclick="nextPrev(-1)">Previous</button>';
-	  	options_section 	+=	'<button type="button" id="nextBtn" onclick="nextPrev(1)">Next</button>';
-	  	options_section 	+=	'</div>';
-	  	options_section 	+=	'</div>';
-	  				
-	  	options_section 	+=	'<div style="text-align:center;margin-top:40px;">';
-	  	options_section 	+=	'<span class="step"></span>';
-	  	options_section 	+=	'<span class="step"></span>';
-	  	options_section 	+=	'<span class="step"></span>';
-	  	options_section 	+=	'<span class="step"></span>';
-	  	options_section 	+=	'</div>';
- 		
- 		document.getElementById('main-content').innerHTML = options_section;
-		showTab(currentTab);
-    }
-	else if(e.path[0].attributes[2].name == 'course-id'){
-		
-		tab_type = e.path[0].attributes[2].name;
-		
-		let all_li = document.getElementsByClassName("list-group-item");
-        
-        for(var ii=0; ii<all_li.length; ii++){
-            all_li[ii].classList.remove("active");
-        }
-        
-        e.path[0].classList.add("active");
-		
-    	otp = generateOTP();
-
-    	currentTab = 0;
-
-  		let options_section = '';
-		//console.log("course id:", e.path[0].attributes[2].value);
-  		course_id = e.path[0].attributes[2].value;
-
-  		options_section += '<h1>Download '+course_id+'</h1>';
-	  	options_section += '<div class="tab" id="tabpanes">';
-		options_section += '<h4><u>Select an option</u></h4>';
-
-		options_data_array.map((optv,opti) => {
-
-			if(optv.voption_type == 'course'){
-
-				options_section += '<div id="tab1">';
-				options_section += '<div class="position-relative row form-group">';
-				options_section += '<label for="txtname" class="col-sm-3 col-form-label">'+optv.voption_title+'</label>';
-				options_section += '<div class="col-sm-9">';
-				options_section += '<input type="radio" for="regForm" value="'+optv.noption_id+'" name="seloptions" seluniversity="'+university_id+'">';
-				options_section += '</div>';
-				options_section += '</div>';
-				options_section += '</div>';
-
-			}
-
-		});
-
-		options_section += '</div>';
-
-	  	options_section	+=	'<div class="tab" id="pdftab">Sample content:';
-	  	if(Number(course_id) <= 3 ){
-	      options_section   +=  '<br><strong>Title1</strong><br><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p><br>';
-	    }
-	    else if(Number(course_id) > 3 ){
-	     options_section   +=  '<br><strong>Title1</strong><br><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p><br>';
-	    }
-	  	options_section 	+=	'</div>';
-
-	  	options_section 	+=	'<div class="tab">General info:';
-	  	options_section 	+=	'<p><input id="visitor-name" name="visitor-name" placeholder="Your name"></p>';
-	  	options_section 	+=	'<p><input id="visitor-mobile" name="visitor-mobile" placeholder="Your mobile" onkeypress="javascript:return isNumber(event)"></p>';
-	  	options_section 	+=	'<p><input id="visitor-email" name="visitor-email" placeholder="Your email"></p>';
+	  	options_section 	+=	'<p><input id="visitor-name" name="visitor-name" placeholder="Your name" value="'+vnam+'"><sml id="name-error" style="font-size: 10px;color: #f00;"></sml></p>';
+	  	options_section 	+=	'<p><input id="visitor-mobile" name="visitor-mobile" placeholder="Your mobile" onkeypress="javascript:return isNumber(event)" value="'+vphn+'"><sml id="phone-error" style="font-size: 10px;color: #f00;"></sml></p>';
+	  	options_section 	+=	'<p><input id="visitor-email" name="visitor-email" placeholder="Your email" value="'+veml+'"><sml id="email-error" style="font-size: 10px;color: #f00;"></sml></p>';
 	  	options_section 	+=	'</div>';
 
 	  	options_section 	+=	'<div class="tab">Verify:';
@@ -380,13 +325,14 @@ window.addEventListener("click", (e) => {
 	    options_section   	+=  '</p>';
 	  	options_section 	+=	'</div>';
 
-	  	options_section 	+=	'<div style="overflow:auto;">';
-	  	options_section 	+=	'<div style="float:right; display: flex;">';
-	  	options_section 	+=	'<button type="button" id="prevBtn" onclick="nextPrev(-1)">Previous</button>&nbsp;&nbsp;';
-	  	options_section 	+=	'<button type="button" id="nextBtn" onclick="nextPrev(1)">Next</button>';
+        options_section 	+= '<div class="col-12">';
+        options_section 	+=	'<div style="overflow:auto;">';
+        options_section     +=  '<table width="80%"><tr>';
+        options_section     +=  '<td><div style="float:left;"><button type="button" id="prevBtn" onclick="nextPrev(-1)">Previous</button></div></td>';
+        options_section     +=  '<td><div style="float:right;"><sml id="nextbtn-text" style="font-weight:bold; font-size: 12px;"></sml><button type="button" id="nextBtn" onclick="nextPrev(1)">Next</button></div></td>';
+        options_section     +=  '</tr></table>';
 	  	options_section 	+=	'</div>';
-	  	options_section 	+=	'</div>';
-
+        options_section     +=  '</div>';
 	  				
 	  	options_section 	+=	'<div style="text-align:center;margin-top:40px;">';
 	  	options_section 	+=	'<span class="step"></span>';
@@ -397,45 +343,41 @@ window.addEventListener("click", (e) => {
  		
  		document.getElementById('main-content').innerHTML = options_section;
 		showTab(currentTab);
+    
+//}
+});
+
+
+window.addEventListener("click", (e) => {
+    console.log('You knocked:', e);
+    userAgent = navigator.userAgent;
+    if(userAgent.match(/chrome|chromium|crios/i)){
+        //ele_type = e.path[0].type;
+        //selected_optionid = e.path[0].attributes[2].value;
+        ele_type = e.srcElement.type;
+        // selected_optionid = e.originalTarget.attributes[2].value;
+        selected_optionid = e.target.attributes[3].value;
+        
+        for(var ai=0; ai<e.target.attributes.length; ai++){
+            // console.log(e.target.attributes[ai].name+" "+e.target.attributes[ai].value);
+            if(e.target.attributes[ai].name == 'data-id'){
+                selected_optionid = e.target.attributes[ai].value; break;
+            }
+        }
     }
-    else if(e.path[0].type == 'radio'){
+    else if(userAgent.match(/firefox|fxios/i)){
+        ele_type = e.srcElement.type;
+        selected_optionid = e.originalTarget.attributes[3].value;
+    }
+    // console.log("1 selected_optionid",selected_optionid);
+    // console.log('type',e.srcElement.type);
+    
+    // if(e.path[0].type == 'radio'){
+    if(ele_type == 'radio'){
     	pdfFile = '';
 		imageFile = '';
-    	let selected_optionid = e.path[0].attributes[2].value;
-		if(tab_type == 'university-id'){
-			//console.log("university_data_array:",university_data_array);
-			let pdfdata = university_data_array.map((univ,unii) => {
-				if(univ.nuniversity_id == university_id){
-					return univ.vpdf_data;
-				}
-			});
-			//console.log("pdfdata:",pdfdata);
-			pdfdata.forEach((pdfv,pdfi) => {
-				if(pdfv != undefined){
-					for (const optid in pdfv) {
-						if(optid == selected_optionid){
-							pdfFile = pdfv[optid];
-						}
-					}
-				}	
-			});
-			
-			let imagedata = university_data_array.map((univ,unii) => {
-				if(univ.nuniversity_id == university_id){
-					return univ.vimage_data;
-				}
-			});
-			imagedata.forEach((imgv,imgi) => {
-				if(imgv != undefined){
-					for (const optidi in imgv) {
-						if(optidi == selected_optionid){
-							imageFile = imgv[optidi];
-						}
-					}
-				}	
-			});
-		}
-		else if(tab_type == 'course-id'){
+    	//let selected_optionid = e.path[0].attributes[2].value;
+		
 			//console.log("course_data_array:",course_data_array);
 			let pdfdata2 = course_data_array.map((coursev,coursei) => {
 				if(coursev.ncourse_id == course_id){
@@ -467,25 +409,45 @@ window.addEventListener("click", (e) => {
 					}
 				}	
 			});
-		}
-		//console.log("pdfFile:",pdfFile);
+		
+		console.log("pdfFile:",pdfFile);
+        pdfFiletext = pdfFile.replace("2022/11/", "");
+        pdfFiletext = pdfFiletext.replace(".pdf", "");
+		//document.getElementById("h2text").innerHTML = pdfFiletext;
+		
+		//var newurl = window.location.href+'&pagename='+str_replace(' ', '-',$pdfFiletext);
+		
+        search_params.set('pg', pdfFiletext);
+        search_params.set('optid', selected_optionid);
+        current_url.search = search_params.toString();
+    
+        var new_url = current_url.toString();
+    
+    	new_url = current_url.origin+"/subject/<?php echo $subjectcategory_param; ?>/<?php echo $subjectname_param; ?>/"+e.originalTarget.attributes[2].value;
+        console.log("new_url",new_url);
+        //console.log("test",new_url);
+        //console.log('selected_optionid', selected_optionid);
+		//console.log("imageFile:",imageFile);
     	pdfObj = document.getElementById("pdftab");
 		
 		let preview_imgurl = upload_base_url + "/" + imageFile;
     	let features = '<div class="alert alert-warning" role="alert">Sample Content</div>';//'Sample content: for Option:'+selected_optionid+' Features:'+university_id+'<br>';
 		features += '<img src="'+preview_imgurl+'" class="rounded mx-auto d-block" alt="some text">';
     	pdfObj.innerHTML = features;
+    	
+    	window.open(new_url, "_self");
     }
-    else if(e.path[0].id == 'visitor-verify'){
+    //else if(e.path[0].id == 'visitor-verify'){
+    else if(ele_type == 'visitor-verify'){
     	//console.log("Visitor verify:", e.path[0].id);
     	let otpbox = document.getElementById("visitor-otp");
     	//console.log("otpbox = OTP:", otpbox+" = "+otp);
     	if(otpbox.value==otp){
     		let pdfMessage = '<div class="alert alert-success" role="alert">';
   			pdfMessage += '<h4 class="alert-heading">Well done!</h4>';
- 			pdfMessage += '<p>Aww yeah, sent you the selected PDF on your email id for later reference.</p>'
+ 			pdfMessage += '<p>Aww yeah, sent you the selected PDF download link on your email id. Thanks</p>'
   			pdfMessage += '<hr>';
-  			pdfMessage += '<p class="mb-0"><button class="btn btn-secondary" onclick="download()">Download</button></p>';
+  			//pdfMessage += '<p class="mb-0"><button class="btn btn-secondary" onclick="download()">Download</button></p>';
 			pdfMessage += '</div>';
 			document.getElementById('main-content').innerHTML = pdfMessage;
     	}
@@ -493,40 +455,28 @@ window.addEventListener("click", (e) => {
     		alert("Not correct");
     	}
     }
-    else if(e.path[0].id == 'visitor-resendotp'){
+    //else if(e.path[0].id == 'visitor-resendotp'){
+    else if(ele_type == 'visitor-resendotp'){    
     	let eml = document.getElementById("visitor-email");
     	sendOTP(eml.value, otp);
     }
-// 	else if(e.path[0].id == 'visitor-sendpdf'){
-//     	//console.log("Visitor verify:", e.path[0].id);
-//     	let otpbox = document.getElementById("visitor-otp");
-//     	//console.log("otpbox = OTP:", otpbox+" = "+otp);
-//     	if(otpbox.value==otp){
-//     		let pdfMessage = '<div class="alert alert-success" role="alert">';
-//   			pdfMessage += '<h4 class="alert-heading">Well done!</h4>';
-//  			pdfMessage += '<p>Aww yeah, sent you the selected PDF on your email id for later reference.</p>'
-//   			pdfMessage += '<hr>';
-// //   			DOWNLOAD BUTTON ==>
-// //   			pdfMessage += '<p class="mb-0"><button class="btn btn-secondary" onclick="download()">Download</button></p>';
-// //   			OR
-// //   			LINK BUTTON==>
-// 			var upload_base_url0 = '<?php echo $upload_dir['baseurl']; ?>';
-// 			var url0 = upload_base_url0 + "/" + pdfFile;
-// 			pdfMessage += '<p class="mb-0"><a href="'+url0+'" class="btn btn-secondary" target="_blank">Download</button></p>';
-			
-// 			pdfMessage += '</div>';
-// 			document.getElementById('main-content').innerHTML = pdfMessage;
-//     	}
-//     	else{
-//     		alert("Not correct");
-//     	}
-//     }
+    
 });
-function sendPDF(emailid,pdfurl){
+function sendPDF(vname,vphone,emailid,pdfurl){
 	var url = location.origin + "/wp-content/plugins/rnb-pdf-download/ajax/sendPdf.php";
 	var data = new FormData();
+	data.append('vname', vname);
+	data.append('vphone', vphone);
     data.append('emailid', emailid);
     data.append('url', pdfurl);
+    // params.has('test')
+    //console.log("seaarch_params:", search_params.get('pg'));
+    data.append('pdfFiletext', '<?php echo $subjectcategory_param." ".$subjectname_param." (".$optionname_param.")"; ?>');
+    
+    localStorage.setItem('vname_phd', vname);
+    localStorage.setItem('vphone_phd', vphone);
+    localStorage.setItem('vemail_phd', emailid);
+    
     var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
@@ -535,11 +485,11 @@ function sendPDF(emailid,pdfurl){
 			
 			let pdfMessage1 = '<div class="alert alert-success" role="alert">';
   			pdfMessage1 += '<h4 class="alert-heading">Well done!</h4>';
- 			pdfMessage1 += '<p>Aww yeah, sent you the selected PDF on your email id for later reference.</p>'
+ 			pdfMessage1 += '<p>Aww yeah, sent you the selected PDF download link on your email id. Thanks</p>'
   			pdfMessage1 += '<hr>';
 			var upload_base_url0 = '<?php echo $upload_dir['baseurl']; ?>';
 			var url0 = upload_base_url0 + "/" + pdfFile;
-			pdfMessage1 += '<p class="mb-0"><a href="'+url0+'" class="btn btn-secondary" target="_blank">Download</button></p>';
+			//pdfMessage1 += '<p class="mb-0"><a href="'+url0+'" class="btn btn-secondary" target="_blank">Download</button></p>';
 			
 			pdfMessage1 += '</div>';
 			document.getElementById('main-content').innerHTML = pdfMessage1;
@@ -608,7 +558,6 @@ function download(){
 }
 
 function showTab(n) {
-  
   // This function will display the specified tab of the form ...
   var x = document.getElementsByClassName("tab");
   x[n].style.display = "block";
@@ -617,6 +566,12 @@ function showTab(n) {
     document.getElementById("prevBtn").style.display = "none";
   } else {
     document.getElementById("prevBtn").style.display = "inline";
+  }
+  if(n == 2){
+      document.getElementById("nextbtn-text").innerHTML = "To download full document click here";
+  }
+  else{
+      document.getElementById("nextbtn-text").innerHTML = "";
   }
   if (n == (x.length - 1)) {
     document.getElementById("nextBtn").style.display = "none"; //innerHTML = "Submit";
@@ -655,7 +610,9 @@ function validateForm() {
   x = document.getElementsByClassName("tab");
   y = x[currentTab].getElementsByTagName("input");
 
-  var visitoremail = '';
+    var visitoremail = '';
+    var visitorname = '';
+    var visitorphone = '';
   // A loop that checks every input field in the current tab:
   
     if(Number(currentTab) == 0){
@@ -682,18 +639,41 @@ function validateForm() {
                 y[i].className += " invalid";
                 valid = false;
             }
-            if(i == 2){
+            if(i == 0){
+                visitorname = y[i].value;
+                if(Number(visitorname.length)<3){
+                    valid = false;
+                    document.getElementById("name-error").innerHTML = "Name must have atleast 3 characters";
+                }
+                else{
+                    document.getElementById("name-error").innerHTML = "";
+                }
+            }
+            else if(i == 1){
+                visitorphone = y[i].value;
+                if(Number(visitorphone.length)!=10){
+                    valid = false;
+                    document.getElementById("phone-error").innerHTML = "Phone No. must  be of 10 digits";
+                }
+                else{
+              	    document.getElementById("phone-error").innerHTML = "";
+                }
+            }
+            else if(i == 2){
                 var mailformat = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
                 if(y[i].value.match(mailformat) == null){
                     valid = false;
+                    document.getElementById("email-error").innerHTML = "Invalid format of email id";
                 }
                 else{
               	    visitoremail = y[i].value;
+              	    document.getElementById("email-error").innerHTML = "";
                 }
             }
         }
         
-    	if(valid==true){
+    	/*if(valid==true){
+    	    document.getElementById('main-content').innerHTML = 'Loading...';
     		//sendOTP(visitoremail, otp);
     		//OR
     		var upload_base_url1 = '<?php echo $upload_dir['baseurl']; ?>';
@@ -703,7 +683,19 @@ function validateForm() {
     		console.log('url_temp:', url_temp);
 			var url1 = upload_base_url1 + "/" + url_temp[0] + "/" + url_temp[1]  + "/" + encodeURIComponent(url_temp[2]);
 			console.log('url1:',url1)
-			sendPDF(visitoremail, url1);
+			sendPDF(visitorname, visitorphone, visitoremail, url1);
+    	}*/
+    	
+    	if(valid==true){
+    	    //console.log('preview_imgurl_onload', preview_imgurl_onload);
+    	    //console.log('preview_pdfurl_onload', preview_pdfurl_onload);
+    	    document.getElementById('main-content').innerHTML = 'Loading...';
+    		var upload_base_url1 = '<?php echo $upload_dir['baseurl']; ?>';
+			var url_temp = preview_pdfurl_onload.split('/');
+    		console.log('url_temp:', url_temp);
+			var url1 = upload_base_url1 + "/" + url_temp[5] + "/" + url_temp[6] + "/" + encodeURIComponent(url_temp[7]);
+			//console.log('pdfurl1:',url1)
+			sendPDF(visitorname, visitorphone, visitoremail, url1);
     	}
         
     }

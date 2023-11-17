@@ -1,19 +1,28 @@
 <?php
 function rnb_course_create() {
+    global $wpdb;
     if (isset($_POST['coursetitle'])) {
         $course = $_POST["coursetitle"];
-        global $wpdb;
+        $stream = $_POST["selstream"];
+        
         $table_name = $wpdb->prefix . "rnb_courses";
 		if(!empty($course))
-		{
+		{	
+        	$res = str_replace( array( '\'', '"', ',' , ';', '<', '>', '(', ')', '.', '|', '/', ':', '\\' ), '', $course);
+			$res = strtolower($res);
+			$vslug = str_replace( ' ', '-', $res);
 			$res = $wpdb->insert(
 					$table_name,
-					array('vcourse_title' => $course, 'ncourse_order' => 1),
-					array('%s', '%s')
+					array('vcourse_title' => $course, 'ncourse_order' => 1, 'ncategory_id' => $stream, 'vslug' => $vslug),
+					array('%s', '%s', '%s', '%s')
 			);
 			$message.= $res." Course Created";
 		}
     }
+    
+    $table_name4 = $wpdb->prefix . "rnb_category";
+
+    $categoryrows  = $wpdb->get_results("SELECT ncategory_id, vcategory_title FROM $table_name4 ORDER BY vcategory_title ASC", ARRAY_A);
     ?>
     <link type="text/css" href="<?php echo WP_PLUGIN_URL; ?>/rnb-pdf-download/style-admin.css" rel="stylesheet" />
     <div class="wrap">
@@ -22,6 +31,18 @@ function rnb_course_create() {
         <form method="post" action="<?php echo $_SERVER['REQUEST_URI']; ?>">
             <table class='wp-list-table widefat fixed'>
 				<tr>
+                    <th class="ss-th-width">Stream</th>
+                    <td>
+                        <select name="selstream" class="ss-field-width">
+                            <?php
+                            foreach($categoryrows as $catkey => $catvalue){ 
+                                echo "<option value='".$catvalue['ncategory_id']."'>".$catvalue['vcategory_title']."</option>";
+                            }
+                            ?>
+                        </select>
+					</td>
+                </tr>
+                <tr>
                     <th class="ss-th-width">Course Name</th>
                     <td>
 						<input type="text" name="coursetitle" class="ss-field-width" placeholder="eg. BCA or MCA">

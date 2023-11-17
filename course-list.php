@@ -6,7 +6,9 @@ function rnb_course_list() {
         <h2>Courses</h2>
         <div class="tablenav top">
             <div class="alignleft actions">
-                <a href="<?php echo admin_url('admin.php?page=rnb_course_create'); ?>">Add New</a>
+    		<br><br>
+            <a class="page-title-action" href="<?php echo admin_url('admin.php?page=rnb_course_create'); ?>">Add New</a>
+    		<br><br>
             </div>
             <br class="clear">
         </div>
@@ -41,7 +43,7 @@ function rnb_course_list() {
                 </tr>
             <?php } ?>
         </table>
-		<input type='submit' name="delete" value='Delete' class='button' onclick="return confirm('Are you sure?')">
+		<!--<input type='submit' name="delete" value='Delete' class='button' onclick="return confirm('Are you sure?')">-->
 		</form>
     </div>
     <?php

@@ -19,6 +19,7 @@ function rnb_options_install() {
 	  `ncourse_id` int(11) NOT NULL AUTO_INCREMENT,
 	  `vcourse_title` varchar(50) NOT NULL,
 	  `ncourse_order` int(11) NOT NULL,
+	  `ncategory_id` int(11) NOT NULL,
 	  PRIMARY KEY (`ncourse_id`)
 	) ENGINE=InnoDB;" ;
 	$sql3 = "CREATE TABLE IF NOT EXISTS ".$wpdb->prefix."rnb_options (
@@ -32,13 +33,29 @@ function rnb_options_install() {
     	`npdf_id` INT NOT NULL AUTO_INCREMENT , 
     	`nuniversity_id` INT NOT NULL , 
     	`vpdf_data` JSON NOT NULL , 
-    	PRIMARY KEY (`npdf_id`), 
-    	UNIQUE (`nuniversity_id`)) ENGINE = InnoDB;";
+        PRIMARY KEY (`npdf_id`)
+    ) ENGINE = InnoDB;";//, UNIQUE (`nuniversity_id`)
+    $sql5 = "CREATE TABLE IF NOT EXISTS ".$wpdb->prefix."rnb_category (
+    	`ncategory_id` INT NOT NULL AUTO_INCREMENT , 
+    	`vcategory_title` varchar(50) NOT NULL,
+    	PRIMARY KEY (`ncategory_id`)
+    ) ENGINE = InnoDB;";
+    $sql6 = "CREATE TABLE `wp_rnb_visitor_data` (
+      `nvid` bigint(20) NOT NULL,
+      `vname` varchar(50) NOT NULL,
+      `vphone` varchar(50) NOT NULL,
+      `vemail` varchar(50) NOT NULL,
+      `vurl` varchar(500) NOT NULL,
+      `jdata` json DEFAULT NULL,
+      `dvisit_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB;";
     require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
 	dbDelta($sql1);
 	dbDelta($sql2);
 	dbDelta($sql3);
 	dbDelta($sql4);
+	dbDelta($sql5);
+	dbDelta($sql6);
 }
 register_activation_hook(__FILE__, 'rnb_options_install');
 add_action('admin_menu','rnb_pdf_modifymenu');
@@ -111,6 +128,14 @@ function rnb_pdf_modifymenu() {
 	'manage_options',
 	'rnb_option_update',
 	'rnb_option_update');
+	
+	add_menu_page('Visitors',
+	'RNB Visitors',
+	'manage_options',
+	'rnb_visitor_list',
+	'rnb_visitor_list'
+	);
+	
 }
 // function rnb_schools_show_events(){
 // 	eventList();
@@ -128,7 +153,12 @@ function rnb_pdf_modifymenu() {
 
 function my_template_array(){
 	$temp = [];
-	$temps['rnb-pdf-download.php'] = 'My Special Template';
+	//$temps['rnb-pdf-download.php'] = 'My Special Template';
+	$temps['rnb-university-list.php'] = 'RNB University Template';				//Responsible for university list
+	$temps['rnb-samples-list.php'] = "RNB Samples Template";					//Responsible for course list
+	$temps['rnb-options.php'] = "RNB Options Template";							//STOP WORKING ON THIS
+	$temps['rnb-university-formats.php'] = 'RNB University Formats Template'; 	//Responsible for university formats
+	$temps['rnb-subject-samples.php'] = 'RNB Subject Samples Template'; 			//Responsible for course samples
 	return $temps;
 }
 function my_template_register($page_templates, $theme, $post){
@@ -156,9 +186,9 @@ function my_header_scripts(){
   	?>
   	<script>
 	window.addEventListener("change", (e) => {
-		// console.log("You knocked? e:",e);
+		console.log("You knocked? e:",e);
 		if(e.type == 'change'){
-			if(e.path[0].type == 'file'){
+			if(e.target.type == 'file'){ //e.path[0].type
 				let eid = e.target.name;
 				var file_input = jQuery(document).find('input[type="file"]');
 				var fileindex = -1;
@@ -180,9 +210,17 @@ function my_header_scripts(){
 					xhttp.onreadystatechange = function() {
 					if (this.readyState == 4 && this.status == 200) {
 					  if(this.responseText != 'error'){
-						let urlbox = document.getElementsByName("optionpdf[]");
-
-						if(e.path[0].attributes[1].value == '.png'){
+						let urlbox = '';
+						// console.log("e.target.value:",e.target.value);
+                      	
+						// if(e.target.value == '.pdf'){ //e.path[0].attributes
+						if(e.target.value.toLowerCase().includes('.pdf')){ //e.path[0].attributes
+							urlbox = document.getElementsByName("optionpdf[]");
+                        }
+						/*else if(e.target.value == '.png'){ //e.path[0].attributes
+							urlbox = document.getElementsByName("optionpreview[]");
+						}*/
+						else{
 							urlbox = document.getElementsByName("optionpreview[]");
 						}
 						let temp_response = this.responseText;
@@ -202,6 +240,64 @@ function my_header_scripts(){
 			console.log("Not a change"); 
 		}
 	});
+	
+	function tableToCSV() {
+    
+        // Variable to store the final csv data
+        var csv_data = [];
+    
+        // Get each row data
+        var rows = document.getElementsByTagName('tr');
+        for (var i = 0; i < rows.length; i++) {
+    
+            // Get each column data
+            var cols = rows[i].querySelectorAll('td,th');
+    
+            // Stores each csv row data
+            var csvrow = [];
+            for (var j = 0; j < cols.length; j++) {
+    
+                // Get the text data of each cell
+                // of a row and push it to csvrow
+                csvrow.push(cols[j].innerHTML);
+            }
+    
+            // Combine each column value with comma
+            csv_data.push(csvrow.join(","));
+        }
+    
+        // Combine each row data with new line character
+        csv_data = csv_data.join('\n');
+    
+        // Call this function to download csv file 
+        downloadCSVFile(csv_data);
+    
+    }
+    function downloadCSVFile(csv_data) {
+        // Create CSV file object and feed
+        // our csv_data into it
+        CSVFile = new Blob([csv_data], {
+            type: "text/csv"
+        });
+    
+        // Create to temporary link to initiate
+        // download process
+        var temp_link = document.createElement('a');
+    
+        // Download csv file
+        temp_link.download = `pg-visitor-data_${(Date.now())}.csv`;
+        var url = window.URL.createObjectURL(CSVFile);
+        temp_link.href = url;
+    
+        // This link should not be displayed
+        temp_link.style.display = "none";
+        document.body.appendChild(temp_link);
+    
+        // Automatically click the link to
+        // trigger download
+        temp_link.click();
+        document.body.removeChild(temp_link);
+    }
 	</script>
   	<?php
 }
@@ -219,4 +315,5 @@ require_once(ROOTDIR . 'options-list.php');
 require_once(ROOTDIR . 'options-update.php');
 require_once(ROOTDIR . 'university-upload.php');
 require_once(ROOTDIR . 'course-upload.php');
+require_once(ROOTDIR . 'visitor-list.php');
 ?>

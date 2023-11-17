@@ -29,11 +29,18 @@ function rnb_option_update() {
         <h2>Options</h2>
         <?php if ($_POST['delete']) { ?>
             <div class="updated"><p>option deleted</p></div>
+        	<br><br>
             <a href="<?php echo admin_url('admin.php?page=rnb_option_list') ?>">&laquo; Back to option list</a>
+            <br><br>
         <?php } else if ($_POST['update']) { ?>
             <div class="updated"><p>option updated</p></div>
-            <a href="<?php echo admin_url('admin.php?page=rnb_option_list') ?>">&laquo; Back to option list</a>
+        	<br><br>
+            <a class="page-title-action" href="<?php echo admin_url('admin.php?page=rnb_option_list') ?>">&laquo; Back to option list</a>
+        	<br><br>
         <?php } else { ?>
+        	<br><br>
+            <a class="page-title-action" href="<?php echo admin_url('admin.php?page=rnb_option_list') ?>">&laquo; Back to option list</a>
+        	<br><br>
             <form method="post" action="<?php echo $_SERVER['REQUEST_URI']; ?>">
                 <table class='wp-list-table widefat fixed'>
                     <tr>
@@ -50,6 +57,7 @@ function rnb_option_update() {
                     </td>
                 </tr>
                 </table>
+                <br>
                 <input type='submit' name="update" value='Save' class='button'> &nbsp;&nbsp;
                 <input type='submit' name="delete" value='Delete' class='button' onclick="return confirm('Are you sure?')">
             </form>
